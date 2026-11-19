@@ -3,7 +3,7 @@ import type { Register } from 'claude-code'
 
 import type { Board } from '../types'
 
-// 진행상황 패널: E:\music\진행상황.md 를 3초마다 읽어 옆 패널에 보여 준다.
+// 진행상황 패널: E:\music\진행상황.md 를 옆 패널에 보여 준다 (파일이 바뀔 만한 순간에만 다시 읽음).
 // 파일 형식: "# 제목" 줄은 구역 제목, "- 내용" 줄은 항목, 나머지 줄은 그대로.
 const PANE = 'progress'
 const TITLE = '진행상황'
@@ -19,24 +19,39 @@ const hhmm = (ms: number) => {
   return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
+// 시계로 몇 초마다 보지 않고, 파일이 바뀌었을 수 있는 순간에만 새로 읽는다:
+// 켤 때 · Claude가 파일을 고치는 도구(Edit/Write/Bash)를 쓴 직후 · 사람이 글을 보낼 때 · /progress
+// (바뀌었는지는 고친 시각만 보고, 바뀌었을 때만 내용을 읽음)
+const refresh = async ($: any) => {
+  const st = await $.fs.stat(FILE).catch(() => undefined)
+  const mtimeMs = st?.mtimeMs ?? 0
+  const now = await read($, board)
+  if (mtimeMs === now.mtimeMs && now.text !== '') return
+  const text = st ? await $.fs.read(FILE).catch(() => '') : ''
+  await update($, board, () => ({ text: String(text), mtimeMs }))
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'progress', description: '진행상황 패널 열기' })
-    const refresh = async () => {
-      const st = await $.fs.stat(FILE).catch(() => undefined)
-      const mtimeMs = st?.mtimeMs ?? 0
-      const now = await read($, board)
-      if (mtimeMs === now.mtimeMs && now.text !== '') return
-      const text = st ? await $.fs.read(FILE).catch(() => '') : ''
-      await update($, board, () => ({ text: String(text), mtimeMs }))
-    }
-    await refresh()
-    $.clock.every(3000, refresh)
+    await refresh($)
     void $.ui.open({ id: PANE, title: TITLE })
     return next(e)
   })
 
+  on('tool.call', async ($, e, next) => {
+    const ran = await next(e)
+    if (e.tool === 'Edit' || e.tool === 'Write' || e.tool === 'Bash' || e.tool === 'PowerShell') await refresh($).catch(() => {})
+    return ran
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    await refresh($).catch(() => {})
+    return next(e)
+  })
+
   on('command.run', { command: 'progress' }, async $ => {
+    await refresh($)
     await $.ui.open({ id: PANE, title: TITLE })
     return { text: '진행상황 패널을 열었어요.' }
   })

@@ -1,9 +1,9 @@
 # progress-pane
 
 Claude Code 옆 패널에 **진행상황 파일**(`E:\music\진행상황.md`)을 항상 띄워 두는 모드입니다.
-파일을 3초마다 다시 읽으므로, Claude나 사람이 파일을 고치면 패널이 저절로 바뀝니다.
+시계로 계속 확인하지 않고, Claude가 파일을 고친 직후(또는 사람이 글을 보낼 때·/progress) 바뀐 경우에만 다시 읽어 패널이 바뀝니다.
 
-A Claude Code mod that keeps a side pane open showing a progress file (a small Markdown list), re-read every 3 seconds.
+A Claude Code mod that keeps a side pane open showing a progress file (a small Markdown list), re-read only right after it may have changed (no polling).
 
 ## 파일 형식
 
