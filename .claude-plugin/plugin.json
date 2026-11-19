@@ -1,0 +1,1 @@
+{ "name": "progress-pane", "version": "0.1.0", "description": "E:\\music\\진행상황.md 를 옆 패널에 항상 보여 준다 (3초마다 새로 읽음)", "types": "./types/index.d.ts", "license": "MIT" }
